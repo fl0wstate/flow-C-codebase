@@ -1,2 +1,2 @@
-# Just testing out the ssh config of my github profile
-
+# Learning how to setup a Codebase
+- Understanding how arena allocators work.
