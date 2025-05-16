@@ -89,19 +89,14 @@ void *arena_alloc(Arena *arena, u64 size)
 {
   void *backing_buffer = NULL;
 
-  /* align the memory of the backing buffer to the nearest multipl of align */
   size = mem_aligment(size, DEFAULT_ALIGNMENT);
 
-  /* actual memory allocation */
   if (arena->alloc_position + size > arena->commit_position)
   {
     u64 commit_size = size;
 
-    /* rounding up the commit_size to the nearest multiple of
-     * M_ARENA_COMMIT_SIZE */
     commit_size += (M_ARENA_COMMIT_SIZE - 1);
     commit_size -= commit_size % M_ARENA_COMMIT_SIZE;
-
     if (arena->commit_position >= arena->max_capacity)
       assert(0 && "Arena is out of memory");
     else
@@ -110,8 +105,7 @@ void *arena_alloc(Arena *arena, u64 size)
       arena->commit_position += commit_size;
     }
   }
-  /* make sure you are starting at the first memory address  */
-  /* "hello" -> arena->memory -> 'h' and arena->alloc_position = 0; */
+  arena->prev_alloc_position = arena->alloc_position;
   backing_buffer = arena->memory + arena->alloc_position;
   arena->alloc_position += size;
   return backing_buffer;
@@ -212,9 +206,12 @@ void *arena_realloc(Arena *arena, void *old_memory, u64 old_size, u64 new_size)
   if (arena->memory <= old_mem &&
       old_mem <= (arena->memory + arena->max_capacity))
   {
-    if (arena->memory + arena->alloc_position == old_mem + old_size)
+    if (arena->memory + arena->prev_alloc_position == old_mem)
     {
-      arena->alloc_position = (old_mem - arena->memory) + new_size;
+      LOG(DEBUG, "prev_pos: %p == old_memory: %p",
+          (void *)arena->prev_alloc_position, (void *)old_memory);
+
+      arena->alloc_position = arena->prev_alloc_position + new_size;
 
       if (new_size > old_size)
         memset(old_mem + old_size, 0, new_size - old_size);

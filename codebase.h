@@ -86,8 +86,9 @@ typedef struct arena
 {
   u8 *memory;
   u64 max_capacity;
-  u64 commit_position;
   u64 alloc_position;
+  u64 commit_position;
+  u64 prev_alloc_position;
 } Arena;
 
 /* for aligment */
