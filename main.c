@@ -2,12 +2,11 @@
 
 int main(void)
 {
-  u64 *x;
+  i32 *x;
   f32 *f;
-  i32 i;
-  Arena global_arena;
+  i8 *str;
 
-  LOG(INFO, "Hello world");
+  Arena global_arena;
 #if 0
   clear;
   trace;
@@ -27,15 +26,12 @@ int main(void)
 
     /* printf("%p: %s\n", str, str); */
 
-    /* str = arena_realloc(&global_arena, str, 10, 16); */
-    /* memmove(str + 7, " world!", 7); */
     /* printf("%p: %s\n", str, str); */
 
 
   f = (float *)arena_alloc(&global_arena, sizeof(float));
 
   *f = 987;
-  /* memmove(str, "Hello ", 7); */
 
   printf("%p: %d\n", (void *)x, *x);
   printf("%p: %f\n", (void *)f, *f);
@@ -50,22 +46,39 @@ int main(void)
 #endif
 
   arena_init_sized(&global_arena, 400);
-  arena_dealloc(&global_arena, 200);
 
+  arena_clear(&global_arena);
   LOG(DEBUG, "%u", global_arena.max_capacity);
   LOG(DEBUG, "%u", global_arena.alloc_position);
 
-  x = (u64 *)arena_alloc(&global_arena, sizeof(i32));
+  x = (i32 *)arena_alloc(&global_arena, sizeof(i32));
   f = (f32 *)arena_alloc(&global_arena, sizeof(f32));
+  str = arena_alloc(&global_arena, 10);
 
   *x = 123;
-  *f = 53.442;
+  *f = 442.43;
+  memmove(str, "Hello ", 7);
 
-  LOG(DEBUG, "Address: %p: %llu", (void *)x, x);
-  LOG(DEBUG, "Address: %p: %llu", (void *)f, f);
+  LOG(DEBUG, "Address: %p: %d", (void *)x, *x);
+  LOG(DEBUG, "Address: %p: %f", (void *)f, *f);
+  LOG(DEBUG, "Address: %p: %s", (void *)str, str);
 
-  LOG(DEBUG, "%u", global_arena.max_capacity);
+  LOG(DEBUG, "I called arena clear to set everything to zero");
+  arena_clear(&global_arena);
+
+  LOG(DEBUG, "%u", global_arena.alloc_position);
+  str = arena_realloc(&global_arena, str, 10, 16);
+  memmove(str + 6, "world!", 7);
+
+  LOG(DEBUG, "char at 6: %c", str[6]);
+  LOG(DEBUG, "char at 13: %c", str[11]);
+  LOG(DEBUG, "Address: %p: %s", (void *)str, str);
+  LOG(DEBUG, "Length of str: %zu", strlen(str));
+
   LOG(DEBUG, "%u", global_arena.alloc_position);
   arena_clear(&global_arena);
+  arena_free(&global_arena);
+
+  LOG(DEBUG, "%u", global_arena.alloc_position);
   return (0);
 }

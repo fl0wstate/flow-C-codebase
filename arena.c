@@ -212,14 +212,14 @@ void *arena_realloc(Arena *arena, void *old_memory, u64 old_size, u64 new_size)
   if (arena->memory <= old_mem &&
       old_mem <= (arena->memory + arena->max_capacity))
   {
-    if (arena->memory + arena->alloc_position == old_mem)
+    if (arena->memory + arena->alloc_position == old_mem + old_size)
     {
-      arena->alloc_position += new_size;
+      arena->alloc_position = (old_mem - arena->memory) + new_size;
 
       if (new_size > old_size)
-        memset(&arena->memory[arena->alloc_position], 0, new_size - old_size);
+        memset(old_mem + old_size, 0, new_size - old_size);
 
-      return old_memory;
+      return old_mem;
     }
     else
     {
