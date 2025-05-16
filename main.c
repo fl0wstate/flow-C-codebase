@@ -58,26 +58,17 @@ int main(void)
   LOG(DEBUG, "%u", global_arena.prev_alloc_position);
   LOG(DEBUG, "%u", global_arena.alloc_position);
 
-  /* new memory to be created ahead of `b`
-   * this will only work by creating a new memory ditching the old one waiting
-   * to be cleared with arena_clear
-
-    a = arena_realloc(&global_arena, a, 8, 16);
-    memcpy(a + 6, " extended", 10);
-    printf("A: %s\n", a);
-
-  */
-
-  /* inplace realloc will happen since it's the last memory pointer
-   * this will work with well by extending it's memory */
   b = arena_realloc(&global_arena, b, 8, 16);
   memcpy(b + 6, " extended", 10);
   printf("B: %s\n", b);
 
+  arena_clear(&global_arena);
+  printf("B: %s\n", b);
+
   LOG(DEBUG, "%u", global_arena.alloc_position);
   arena_clear(&global_arena);
-  arena_free(&global_arena);
-  LOG(DEBUG, "%u", global_arena.alloc_position);
 
+  /* final free */
+  arena_free(&global_arena);
   return (0);
 }
