@@ -47,7 +47,7 @@ typedef double f64;
 #define NOB_IMPLEMENTATION
 
 /* Memory alignment size */
-#define DEFAULT_ALIGNMENT sizeof(long long)
+#define DEFAULT_ALIGNMENT 8
 
 /* boolen flags */
 #define true 1
@@ -94,11 +94,13 @@ typedef struct arena
 u64 mem_aligment(u64 ptr, u64 align);
 u8 ispoweroftwo(u64);
 
+void *arena_alloc(Arena *, u64);
 void *arena_alloc_zero(Arena *, u64 size);
 void arena_dealloc(Arena *, u64 size);
 void arena_dealloc_to(Arena *, u64 position);
 void *arena_raise(Arena *, void *, u64);
 void *arena_alloc_array_sized(Arena *, u64 element_size, u64 count);
+void *arena_realloc(Arena *arena, void *old_memory, u64 old_size, u64 new_size);
 /* Only for already existing arenas */
 void arena_init_sized(Arena *, u64);
 void arena_init(Arena *);

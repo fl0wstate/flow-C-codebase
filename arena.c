@@ -1,14 +1,23 @@
 #include "codebase.h"
 
 /* This will be where all the memory allocation will be created and happening.
+ * if a number is divisible by two it will switch all the bits into zero
+ *
+ * example: 8 & (8 - 1)
+ * 1000
+ * 0001
+ * ----
+ * 0000
+ *
+ * returns false multiple of 2
  */
 
-u8 ispoweroftwo(u64 x) { return (x & (x - 1)); }
+u8 ispoweroftwo(u64 x) { return (x & (x - 1)) == false; }
 
 /*
  * A function that returns a pointer to a paged memory on the virtual space
  * @size: 64bit size which will be used to allocate the memory size
- *  - PROT_NONE -> means the pages cannont be accessed
+ *  - PROT_NONE -> means the memory pages cannont be accessed
  *  - MAP_PRIVATE -> mapping are not visible to other processes
  *  - MAP_ANONYMOUS -> basically means all the contents are intialized to zero
  * (zero paged memory)
@@ -36,11 +45,22 @@ void unmap_memory(void *mapped_memory, u64 size)
   munmap(mapped_memory, size);
 }
 
-/* memory aligment */
+/* memory aligment - aligns the inputed memory size to be a multiple of two for
+ * faster memory reading and writing. better for opitimization
+ *
+ * @ptr: pointer to the user inputed memory
+ * @align: pointer to the default memory size aligment to be used
+ *
+ * Return: an aligned size that is a multiple of the DEFAULT_ALIGNMENT
+ * provided which is 8bytes(64bits)
+ */
 u64 mem_aligment(u64 ptr, u64 align)
 {
-  u64 apointer, size, modulo;
-  assert(ispoweroftwo(size));
+  u64 apointer;
+  u64 size;
+  u64 modulo;
+
+  assert(ispoweroftwo(align));
 
   apointer = ptr;
   size = align;
@@ -57,7 +77,14 @@ u64 mem_aligment(u64 ptr, u64 align)
   return (apointer);
 }
 
-/* arena Allocation */
+/* arena_alloc - returns a pointer to an allocated memory inputed by the user
+ *
+ * @arena: Pointer to the arena struct
+ * @size: size of the memory to allocate
+ *
+ * Returns: a void pointer with the allocated memory size
+ */
+
 void *arena_alloc(Arena *arena, u64 size)
 {
   void *backing_buffer = NULL;
@@ -78,7 +105,10 @@ void *arena_alloc(Arena *arena, u64 size)
     if (arena->commit_position >= arena->max_capacity)
       assert(0 && "Arena is out of memory");
     else
+    {
+      commit_memory(arena->memory + arena->commit_position, commit_size);
       arena->commit_position += commit_size;
+    }
   }
   /* make sure you are starting at the first memory address  */
   /* "hello" -> arena->memory -> 'h' and arena->alloc_position = 0; */
@@ -87,7 +117,13 @@ void *arena_alloc(Arena *arena, u64 size)
   return backing_buffer;
 }
 
-/* arena memory initialization */
+/* arena_alloc_zero - arena memory initialization
+ *
+ * @arena: a pointer to the arena struct
+ * @size: 8byte memory size to be allocated
+ *
+ * Returns: a void pointer to the allocated memory which is initialized to zero
+ */
 void *arena_alloc_zero(Arena *arena, u64 size)
 {
   void *allocated_memory = arena_alloc(arena, size);
@@ -95,7 +131,13 @@ void *arena_alloc_zero(Arena *arena, u64 size)
   return allocated_memory;
 }
 
-/* clearing the arena */
+/* arena_dealloc -  clearing the arena
+ *
+ * @arena: a pointer to the arena struct
+ * @size: 8byte memory size to be allocated
+ *
+ * Returns: NULL
+ */
 void arena_dealloc(Arena *arena, u64 size)
 {
   if (size > arena->alloc_position)
@@ -103,6 +145,13 @@ void arena_dealloc(Arena *arena, u64 size)
   arena->alloc_position -= size;
 }
 
+/* arena_dealloc - clearing the arena
+ *
+ * @arena: a pointer to the arena struct
+ * @position: 8byte sized position the memory size should be reduced to
+ *
+ * Returns: NULL
+ */
 void arena_dealloc_to(Arena *arena, u64 position)
 {
   if (position > arena->max_capacity)
@@ -113,6 +162,14 @@ void arena_dealloc_to(Arena *arena, u64 position)
   arena->alloc_position = position;
 }
 
+/* arena_raise - allocate the data from the void ptr to the arena
+ *
+ * @arena: a pointer to the arena struct
+ * @ptr: pointer to some random data to be copied on the arena
+ * @size: size of the void pointer memory
+ *
+ * Returns: a pointer to the allocated memory in the arena
+ */
 void *arena_raise(Arena *arena, void *ptr, u64 size)
 {
   void *allocated_memory = arena_alloc(arena, size);
@@ -120,13 +177,73 @@ void *arena_raise(Arena *arena, void *ptr, u64 size)
   return allocated_memory;
 }
 
-/* use it to hold strings in memory important strings */
+/* arena_alloc_array_sized - allocate memory on the arena which is sized to hold
+ * the actual elements inside of the sized array
+ *
+ * @arena: a pointer to the arena struct
+ * @elem_size: size of each element in the array
+ * @count: size of the inputed array
+ *
+ * Returns: a pointer to the allocated memory in the arena
+ */
 void *arena_alloc_array_sized(Arena *arena, u64 elem_size, u64 count)
 {
   return arena_alloc(arena, elem_size * count);
 }
 
-/* initialization of the arena */
+/**
+ * arena_realloc - it's going to increase the memory size of the pointer given
+ *
+ * @arena: pointer to the arena struct
+ * @old_memory: pointer to the old pointer
+ * @old_size: size of the old allocated memory
+ * @new_size: size of the new allocated memory on the arena
+ * @align: size of the memory alignment
+ *
+ * Returns: void pointer to the newly created memory inside the arena
+ */
+void *arena_realloc(Arena *arena, void *old_memory, u64 old_size, u64 new_size)
+{
+  u8 *old_mem = old_memory;
+
+  if (!old_mem || old_size == 0)
+    return arena_alloc(arena, new_size);
+
+  if (arena->memory <= old_mem &&
+      old_mem <= (arena->memory + arena->max_capacity))
+  {
+    if (arena->memory + arena->alloc_position == old_mem)
+    {
+      arena->alloc_position += new_size;
+
+      if (new_size > old_size)
+        memset(&arena->memory[arena->alloc_position], 0, new_size - old_size);
+
+      return old_memory;
+    }
+    else
+    {
+      void *new_mem = arena_alloc(arena, new_size);
+
+      u64 copy_size = old_size < new_size ? old_size : new_size;
+
+      memmove(new_mem, old_memory, copy_size);
+      return new_mem;
+    }
+  }
+  else
+  {
+    assert(0 && "Memory is out of bounds of the buffer in this arena");
+    return NULL;
+  }
+}
+
+/* arena_init - initialization of the arean with the default Memory size 8KB
+ *
+ * @arena: a pointer to the arena struct
+ *
+ * Returns; NULL
+ */
 void arena_init(Arena *arena)
 {
   ZeroUpStructMem(arena, Arena);
@@ -135,6 +252,14 @@ void arena_init(Arena *arena)
   arena->alloc_position = 0;
   arena->commit_position = 0;
 }
+
+/* arena_init - initialization of the arena with a suggested size
+ *
+ * @arena: a pointer to the arena struct
+ * @capacity: size of the arena memory to be allocated
+ *
+ * Returns; NULL
+ */
 void arena_init_sized(Arena *arena, u64 capacity)
 {
   ZeroUpStructMem(arena, Arena);
