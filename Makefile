@@ -1,6 +1,6 @@
 cc = gcc
 flags = -Wall -Werror -pedantic -std=c99 -g
-files = ./arena.c ./main.c ./log.c
+files = ./arena.c ./main.c ./log.c ./thread.c
 obj = $(files:.c=.o)
 
 all: binary

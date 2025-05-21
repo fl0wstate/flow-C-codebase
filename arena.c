@@ -11,7 +11,6 @@
  *
  * returns false multiple of 2
  */
-
 u8 ispoweroftwo(u64 x) { return (x & (x - 1)) == false; }
 
 /*

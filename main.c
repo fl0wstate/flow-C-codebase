@@ -1,10 +1,35 @@
 #include "codebase.h"
 
+u64 test_thread(void *contex)
+{
+  u8 *temp;
+  ThreadContext *thread_ctx = (ThreadContext *)contex;
+  thread_ctx_init(thread_ctx);
+
+  A_Scratch scratch = thread_ctx_get(thread_ctx);
+
+  temp = (u8 *)arena_alloc(&scratch.arena, 128);
+
+  sprintf((void *)temp, "Hello world from a thread");
+
+  LOG(INFO, "%s", (u8 *)temp);
+
+  thread_ctx_return(thread_ctx, &scratch);
+
+  thread_ctx_free(thread_ctx);
+  return 0;
+}
+
 int main(void)
 {
   i32 *x;
   f32 *f;
   i8 *str;
+
+  ThreadContext worker_ctx = {0};
+  OS_thread worker = OS_ThreadCreate(test_thread, &worker_ctx);
+  OS_threadWaitForJoin(&worker);
+  LOG(INFO, "You are now entering the main thread");
 
   Arena global_arena;
 #if 0
@@ -36,7 +61,7 @@ int main(void)
 
   str = arena_realloc(&global_arena, str, 10, 16);
 
-  memmove(str + 6, "world!", 7);
+  memmove(str + 6, "w orld!", 7);
 
   LOG(DEBUG, "Address: %p: %s", (void *)str, str);
   LOG(DEBUG, "Length of str: %zu", strlen(str));
