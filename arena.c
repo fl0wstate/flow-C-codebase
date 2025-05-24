@@ -243,7 +243,8 @@ void *arena_realloc(Arena *arena, void *old_memory, u64 old_size, u64 new_size)
 void arena_init(Arena *arena)
 {
   ZeroUpStructMem(arena, Arena);
-  arena->max_capacity = sizeof(void *) * 1024;
+  /* LOG(DEBUG, "Max arena size...: %u", MAX_ARENA_SIZE); */
+  arena->max_capacity = MAX_ARENA_SIZE;
   arena->memory = map_memory(arena->max_capacity);
   arena->alloc_position = 0;
   arena->commit_position = 0;

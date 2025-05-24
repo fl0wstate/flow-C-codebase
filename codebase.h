@@ -76,8 +76,9 @@ typedef double f64;
          FILE_NAME, __LINE__);                                                 \
      clear;)
 
+#define MAX_ARENA_SIZE (u64)(sizeof(u64) * 2048)
 #define M_ARENA_COMMIT_SIZE (u64)(8 * 1024)
-#define M_SCRATCH_SIZE (u64)(8 * 1024)
+#define M_SCRATCH_SIZE (u64)(1024)
 
 #define ZeroUpMem(d, s) memset((d), 0, (s))
 #define ZeroUpStructMem(d, s) ZeroUpMem((d), sizeof(s))
@@ -158,13 +159,16 @@ typedef struct ThreadContext
   scratch_ll *list;
 } ThreadContext;
 
+/* initialization and cleaning of a thread */
 void thread_ctx_init(ThreadContext *ctx);
 void thread_ctx_free(ThreadContext *ctx);
 
+/* creating an arena inside the thread */
 A_Scratch thread_ctx_get(ThreadContext *ctx);
 void thread_ctx_reset(ThreadContext *ctx, A_Scratch *);
 void thread_ctx_return(ThreadContext *ctx, A_Scratch *);
 
+/* creating and joining a the thread */
 OS_thread OS_ThreadCreate(thread_func *start, void *context);
 void OS_threadWaitForJoin(OS_thread *other);
 

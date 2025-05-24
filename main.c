@@ -1,8 +1,10 @@
 #include "codebase.h"
 
+/* the routine function that will be runned inside the thread */
 u64 test_thread(void *contex)
 {
   u8 *temp;
+  u8 *temp2;
   ThreadContext *thread_ctx = (ThreadContext *)contex;
   thread_ctx_init(thread_ctx);
 
@@ -12,9 +14,15 @@ u64 test_thread(void *contex)
 
   sprintf((void *)temp, "Hello world from a thread");
 
+  LOG(DEBUG, "Current buffer size: %u", scratch.arena.alloc_position);
   LOG(INFO, "%s", (u8 *)temp);
 
   thread_ctx_return(thread_ctx, &scratch);
+
+  temp2 = (u8 *)arena_alloc(&scratch.arena, 200);
+  LOG(DEBUG, "Current buffer size: %u", scratch.arena.alloc_position);
+  sprintf((void *)temp2, "Hello world from a thread memory storage two");
+  LOG(INFO, "%s", (u8 *)temp2);
 
   thread_ctx_free(thread_ctx);
   return 0;
@@ -31,7 +39,6 @@ int main(void)
   OS_threadWaitForJoin(&worker);
   LOG(INFO, "You are now entering the main thread");
 
-  Arena global_arena;
 #if 0
   clear;
   trace;
@@ -39,8 +46,8 @@ int main(void)
 
   /* arena_clear(&r_arena); */
   /* arena_raise(&r_arena, (void *)array, strlen(array)); */
-#endif
 
+  Arena global_arena;
   arena_init_sized(&global_arena, 400);
 
   arena_clear(&global_arena);
@@ -95,5 +102,6 @@ int main(void)
 
   /* final free */
   arena_free(&global_arena);
+#endif
   return (0);
 }
